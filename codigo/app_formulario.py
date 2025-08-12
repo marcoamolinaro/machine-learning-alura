@@ -1,13 +1,17 @@
 from dash import Dash, dcc, html
 from dash.dependencies import Output, Input, State
 import dash_bootstrap_components as dbc
+import joblib
+import pandas as pd
+import numpy as np
+
+modelo = joblib.load('modelo_xgboost.pkl')
+medianas = joblib.load('medianas.pkl')
 
 app = Dash(__name__,
            external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-app.layout = html.Div([
-    html.H1("Previsão de doença cardíaca"),
-    dbc.Container([
+formulario = dbc.Container([
         dbc.Row([
             dbc.Col([
                 dbc.CardGroup([
@@ -17,8 +21,8 @@ app.layout = html.Div([
                 dbc.CardGroup([
                 dbc.Label("Sexo Biológico"),
                     dbc.Select(id='sexo', options=[
-                        {'label': 'Masculino', 'value': 'M'},
-                        {'label': 'Feminino', 'value': 'F'}
+                        {'label': 'Masculino', 'value': '1'},
+                        {'label': 'Feminino', 'value': '0'}
                     ]),
                 ], className='mb-3'),
                 # tipo de dor no peito
@@ -49,14 +53,15 @@ app.layout = html.Div([
                         {'label': 'Maior que 120 mg/dl', 'value': '1'},
                     ], className='mb-3'),
                 ]),
-                # restceg
+                # restecg
                 dbc.CardGroup([
-                    dbc.Label('Eletrocardiografia em repouso'),
-                    dbc.Select(id='restceg', options=[
-                        {'label': 'Sim', 'value': '1'},
-                        {'label': 'Não', 'value': '0'},
-                    ], className='mb-3'),
-                ]), 
+                    dbc.Label("Eletrocardiografia em repouso"),
+                    dbc.Select(id='restecg', options=[
+                        {'label': 'Normal', 'value': '0'},
+                        {'label': 'Anormalidades de ST-T', 'value': '1'},
+                        {'label': 'Hipertrofia ventricular esquerda', 'value': '2'}
+                    ]),
+                ], className='mb-3'),
             ]),
             dbc.Col([
                 # thalach
@@ -67,8 +72,11 @@ app.layout = html.Div([
                 # exang
                 dbc.CardGroup([
                     dbc.Label('Angina induzida por exercício'),
-                    dbc.Input(id='exang', type='number', placeholder='Digite a angina induzida por exercício')
-                ], className='mb-3'),
+                    dbc.Select(id='exang', options=[
+                        {'label': 'Sim', 'value': '1'},
+                        {'label': 'Não', 'value': '0'},
+                    ], className='mb-3'),
+                ]), 
                 # oldpeak
                 dbc.CardGroup([
                     dbc.Label('Depressão do segmento ST induzida por exercício'),
@@ -76,7 +84,7 @@ app.layout = html.Div([
                 ], className='mb-3'),
                 # slope
                 dbc.CardGroup([
-                    dbc.Label("Inclinação do segmento sT"),
+                    dbc.Label("Inclinação do segmento ST"),
                     dbc.Select(id='slope', options=[
                         {'label': 'Ascendente', 'value': '1'},
                         {'label': 'Plana', 'value': '2'},
@@ -104,17 +112,64 @@ app.layout = html.Div([
                 ], className='mb-3'),    
                 # botão de submit para previsão
                 dbc.CardGroup([
-                    dbc.Button("Prever", id='botao-prever', color='primary')
+                    dbc.Button("Prever", id='botao-prever', color='primary', n_clicks=0)
                 ], className='mb-3'),
-
             ]),
         ])
     ])
 
+app.layout = html.Div([
+    html.H1("Previsão de doença cardíaca"),
+    formulario,
+    html.Div(id='previsao')
 ])
 
 
+@app.callback(
+    Output('previsao', 'children'),
+    [
+        Input('botao-prever', 'n_clicks')
+    ],
+    [State('idade', 'value'),
+    State('sexo', 'value'),
+    State('cp', 'value'),
+    State('trestbps', 'value'),
+    State('chol', 'value'),
+    State('fbs', 'value'),
+    State('restecg', 'value'),
+    State('thalach', 'value'),
+    State('exang', 'value'),
+    State('oldpeak', 'value'),
+    State('slope', 'value'),
+    State('ca', 'value'),
+    State('thal', 'value')]
+)
+def prever_doenca(n_clicks, idade, sexo, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal):
+    if n_clicks == 0:
+        return ''
+    
+    entradas_usuario = pd.DataFrame(
+        data = [[idade, sexo, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal]],
+        columns=['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal']
+    )
 
+    # preencher os campos nulos ou em branco com as medianas
+    entradas_usuario.fillna(medianas, inplace=True)
+    
+    # oldpeak é float
+    entradas_usuario['oldpeak'] = entradas_usuario['oldpeak'].astype(np.float64)
+
+    # os outros, converter números de string para int
+    for col in entradas_usuario.columns:
+        if col != 'oldpeadk':
+            entradas_usuario[col] = entradas_usuario[col].astype(np.int64)
+
+    previsao = modelo.predict(entradas_usuario)[0]
+
+    if previsao == 1:
+        return html.H2("Você tem doença cardíaca")
+    
+    return html.H2("Você não tem doença cardíaca")
 
 # Run app
 if __name__ == '__main__':

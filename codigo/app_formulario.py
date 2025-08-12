@@ -9,7 +9,7 @@ modelo = joblib.load('modelo_xgboost.pkl')
 medianas = joblib.load('medianas.pkl')
 
 app = Dash(__name__,
-           external_stylesheets=[dbc.themes.BOOTSTRAP])
+           external_stylesheets=[dbc.themes.FLATLY])
 
 formulario = dbc.Container([
         dbc.Row([
@@ -111,15 +111,14 @@ formulario = dbc.Container([
                     ], className='mb-3'),
                 ], className='mb-3'),    
                 # botão de submit para previsão
-                dbc.CardGroup([
-                    dbc.Button("Prever", id='botao-prever', color='primary', n_clicks=0)
-                ], className='mb-3'),
+                dbc.Button("Prever", id='botao-prever', color='success', n_clicks=0, className='mb-3 mt-3'),
             ]),
         ])
-    ])
+    ], fluid=True)
 
 app.layout = html.Div([
-    html.H1("Previsão de doença cardíaca"),
+    html.H1("Previsão de doença cardíaca", className='text-center mt-5'),
+    html.P("Prencha as informações abaixo e clique em PREVER para rodar o modelo", className='text-center mb-5'),
     formulario,
     html.Div(id='previsao')
 ])
@@ -167,9 +166,14 @@ def prever_doenca(n_clicks, idade, sexo, cp, trestbps, chol, fbs, restecg, thala
     previsao = modelo.predict(entradas_usuario)[0]
 
     if previsao == 1:
-        return html.H2("Você tem doença cardíaca")
-    
-    return html.H2("Você não tem doença cardíaca")
+        mensagem = "Você tem doença cardíaca"
+        cor_do_alerta = 'danger'
+    else:
+        mensagem = "Você não tem doença cardíaca"
+        cor_do_alerta = 'success'
+
+    alerta = dbc.Alert(mensagem, color=cor_do_alerta, className='d-flex justify-content-center')
+    return alerta
 
 # Run app
 if __name__ == '__main__':

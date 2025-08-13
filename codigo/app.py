@@ -1,37 +1,29 @@
-from ucimlrepo import fetch_ucirepo
-import pandas as pd
-import plotly.express as px
 from dash import Dash, dcc, html
+from dash.dependencies import Output, Input, State
 
-# Fetch dataset
-heart_disease = fetch_ucirepo(id=45)
-dados = heart_disease.data.features
 
-# Create histogram figure (no .show() here!)
-figura_histograma = px.histogram(dados, x='age', title='Histograma de idade')
-div_do_histograma = html.Div([
-        html.H2("Histograma de Idades"),
-        dcc.Graph(figure=figura_histograma)
-    ])
-
-dados['doenca'] = (heart_disease.data.targets > 0) * 1
-figura_boxplot = px.box(dados, x='doenca', y='age', title='Boxplot de Idades', color='doenca')
-div_do_boxplot = html.Div([
-        html.H2("Boxplot de Idades"),
-        dcc.Graph(figure=figura_boxplot)
-    ])
-
-# Dash app
-app = Dash(__name__)
+app = Dash(__name__, external_stylesheets=['assets/main.css'])
 
 app.layout = html.Div([
-    html.H1("Análise de dados do UCI Repository Heart Disease"),
-    div_do_histograma,
-    div_do_boxplot
+    dcc.Location(id='url', refresh=False),
+    html.Nav([
+        dcc.Link('Gráficos', href='/graficos'),
+        dcc.Link('Formulário', href='/formulário'),
+    ]),
+    html.Div(id='conteudo')
 ])
 
-# podemos adicionar de forma dinâmica mais elementos no gráfico
-#app.layout.children.append(div_do_boxplot)
+@app.callback(
+    Output('conteudo', 'children'),
+    [Input('url', 'pathname')]
+)
+def mostrar_pagina(pathname):
+    if pathname == '/formulario':
+        return html.P('formulario')
+    elif pathname == '/graficos':
+        return html.P('graficos')
+    else:
+        return html.P('Página inicial')
 
 # Run app
 if __name__ == '__main__':

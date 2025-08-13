@@ -14,18 +14,30 @@ div_do_histograma = html.Div([
         dcc.Graph(figure=figura_histograma)
     ])
 
+
 dados['doenca'] = (heart_disease.data.targets > 0) * 1
 figura_boxplot = px.box(dados, x='doenca', y='age', title='Boxplot de Idades', color='doenca')
 div_do_boxplot = html.Div([
         dcc.Graph(figure=figura_boxplot)
     ])
 
+# adicionando novos gráficos
+figura_boxplot_chol = px.box(dados, x='doenca', y='chol', color='doenca', title='Boxplot de Colesterol Sérico')
+div_do_boxplot_chol = html.Div([
+    dcc.Graph(figure=figura_boxplot_chol)
+])
+
+figura_boxplot_trestbps = px.box(dados, x='doenca', y='trestbps', color='doenca', title='Pressão sanguínea em repouso')
+div_do_boxplot_trestbps = html.Div([
+    dcc.Graph(figure=figura_boxplot_trestbps)
+])
+
 layout = html.Div([
     html.H1("Análise de dados do UCI Repository Heart Disease", className='text-center mb=5'),
     dbc.Container([
         dbc.Row([
-            dbc.Col([div_do_histograma], md=6),
-            dbc.Col([div_do_boxplot], md=6)
+            dbc.Col([div_do_histograma, div_do_boxplot_chol], md=6),
+            dbc.Col([div_do_boxplot, div_do_boxplot_trestbps], md=6)
         ])
     ])
 ])

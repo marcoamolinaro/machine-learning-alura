@@ -1,0 +1,6 @@
+transformers
+torch
+numpy
+gradio
+datasets
+huggingface_hub
